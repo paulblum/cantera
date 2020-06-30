@@ -1,4 +1,4 @@
-/// @file psr.cpp
+/// @file PSRv1.cpp
 /// Perfectly Stirred Reactor (v0.1)
 
 #include "BoundaryValueProblem.h"
