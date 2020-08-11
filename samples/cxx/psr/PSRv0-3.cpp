@@ -2,15 +2,14 @@
 /// Perfectly Stirred Reactor Solver (v0.3)
 /// Changes since v0.2.1:
 ///     - Created a separate module for nonlinear system solution (Cantera1D_NonLinSol)
-///     - Removed nonlinear solver capability from PSR, which now uses Cantera1D_NonLinSol for that
+///     - Removed nonlinear solver capability from PSR
 
-#include "Cantera1D_NonLinSol.h" //a nonlinear algebraic system solver
-#include "NonLinSol_user.h"      //interface for using a nonlinear solver
+#include "cantera/numerics/Cantera_NonLinSol.h" //a nonlinear algebraic system solver
 
 const char *MECHANISM = "gri30.yaml";
 const double PRESSURE = Cantera::OneAtm;
 
-class PSR : public NonLinSol_user //inherit nonlinear solver use capability
+class PSR : public Cantera_NonLinSol //inherit nonlinear solver functionality
 {
 public:
     // Constructor
@@ -27,9 +26,11 @@ public:
     {
     }
 
+    /// Providing implementations for the solver's virtual functions:
+
     // Specify guesses for the initial values.
     // Note: called during Sim1D initialization
-    doublereal initialGuess(size_t i, size_t j)
+    doublereal initialValue(size_t i, size_t j)
     {
         return reactorThermo->massFraction(i); // mass fractions of the provided intial reactorSol (aka the initial guess)
     }
@@ -43,7 +44,7 @@ public:
     // Advance the PSR to steady state
     void solveSteady()
     {
-        Cantera1D_NonLinSol(this).solve(); //probably have to free this object... but classes derived from Domain1D can't be assigned. planning on changing this line, but works for now.
+        Cantera_NonLinSol::solve();
     }
 
     // Specify the residual function for the system
@@ -53,8 +54,6 @@ public:
     {
         // ----------------------- UPDATE REACTOR STATE -----------------------
         reactorThermo->setMassFractions_NoNorm(sol);
-        // reactorThermo->setMassFractions(sol); -> alternative method, will compare performance between the two
-
         reactorThermo->setState_HP(inletThermo->enthalpy_mass(), PRESSURE); // keep total enthalpy constant, allow Cantera to control reactor temperature
 
         // ----------------------- GET REQ'D PROPERTIES -----------------------
