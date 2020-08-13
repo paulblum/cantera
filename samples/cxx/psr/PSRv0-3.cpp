@@ -30,13 +30,13 @@ public:
 
     // Specify guesses for the initial values.
     // Note: called during Sim1D initialization
-    doublereal initialValue(size_t i, size_t j)
+    doublereal ctNLS_initialValue(size_t i, size_t j)
     {
         return reactorThermo->massFraction(i); // mass fractions of the provided intial reactorSol (aka the initial guess)
     }
 
     // Number of equations (state variables) for this reactor
-    size_t neq()
+    size_t ctNLS_nEqs()
     {
         return nSpecies;
     }
@@ -50,7 +50,7 @@ public:
     // Specify the residual function for the system
     //  sol - iteration solution vector (input)
     //  rsd - residual vector (output)
-    void residFunction(double *sol, double *rsd)
+    void ctNLS_residFunction(double *sol, double *rsd)
     {
         // ----------------------- UPDATE REACTOR STATE -----------------------
         reactorThermo->setMassFractions_NoNorm(sol);

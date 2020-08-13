@@ -9,6 +9,7 @@
 #include "Reactor.h"
 #include "cantera/numerics/FuncEval.h"
 #include "cantera/numerics/Integrator.h"
+#include "cantera/numerics/Cantera_NonLinSol.h"
 #include "cantera/base/Array.h"
 
 namespace Cantera
@@ -20,7 +21,7 @@ namespace Cantera
  *  a network of reactors (Reactor, ConstPressureReactor) connected by various
  *  means, e.g. Wall, MassFlowController, Valve, PressureController.
  */
-class ReactorNet : public FuncEval
+class ReactorNet : public FuncEval, public Cantera_NonLinSol
 {
 public:
     ReactorNet();
@@ -254,6 +255,21 @@ public:
     //! Retrieve absolute step size limits during advance
     bool getAdvanceLimits(double* limits);
 
+    //! Advance the reactor network to steady state.
+    double solveSteady();
+
+    // Specify the residual function for the system
+    //  sol - iteration solution vector (input)
+    //  rsd - residual vector (output)
+    virtual void ctNLS_residFunction(double *sol, double *rsd);
+
+    // Specify guesses for the initial values.
+    // Note: called during Sim1D initialization
+    virtual doublereal ctNLS_initialValue(size_t i);
+
+    // Number of equations (state variables) for this reactor
+    virtual size_t ctNLS_nEqs();
+
 protected:
 
     //! Estimate a future state based on current derivatives.
@@ -274,9 +290,11 @@ protected:
     bool m_init;
     bool m_integrator_init; //!< True if integrator initialization is current
     size_t m_nv;
+    size_t m_SSneq;
 
     //! m_start[n] is the starting point in the state vector for reactor n
     std::vector<size_t> m_start;
+    std::vector<size_t> m_SSstart;
 
     vector_fp m_atol;
     doublereal m_rtol, m_rtolsens;

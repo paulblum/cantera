@@ -30,14 +30,14 @@ public:
     // Specify the residual function for the system
     //  sol - iteration solution vector (input)
     //  rsd - residual vector (output)
-    virtual void residFunction(double *sol, double *rsd) = 0;
+    virtual void ctNLS_residFunction(double *sol, double *rsd) = 0;
 
     // Specify guesses for the initial values.
     //  Note: called during Sim1D initialization
-    virtual doublereal initialValue(size_t i, size_t j) = 0;
+    virtual doublereal ctNLS_initialValue(size_t i) = 0;
 
     // Number of equations (state variables) for this reactor
-    virtual size_t neq() = 0;
+    virtual size_t ctNLS_nEqs() = 0;
 
 /// CALLABLE FUNCTIONS:
 
@@ -60,29 +60,35 @@ public:
      */
     void solve(int loglevel = 0)
     {
-        if (Domain1D::nComponents() != neq())
-            reconfigure(neq());
+        if (Domain1D::nComponents() != ctNLS_nEqs())
+            reconfigure(ctNLS_nEqs());
 
         std::vector<Cantera::Domain1D *> domains{this};
         Cantera::Sim1D(domains).solve(loglevel);
     }
 
 private:
-/// INTERNAL FUNCTION:
+/// INTERNAL FUNCTIONS:
 
     // Implementing the residual function for the Cantera solver to use. Handles time integration, calls subclass residFunction for residuals.
     void eval(size_t jg, double *sol, double *rsd, int *timeintMask, double rdt)
     {
-        residFunction(sol, rsd); // call subclass residFunction() implementation to update rsd
+        ctNLS_residFunction(sol, rsd); // call subclass residFunction() implementation to update rsd
 
         if (rdt == 0)
             return; // rdt is the reciprocal of the time step "dt"; rdt != 0 for time integration...
 
         // -------------------- TIME INTEGRATION --------------------------
-        for (int i = 0; i < neq(); i++)
+        for (int i = 0; i < ctNLS_nEqs(); i++)
         {
             rsd[i] -= rdt * (sol[i] - prevSoln(i, 0)); // backward euler method (result will be appropriately extracted from the residual)
             timeintMask[i] = 1;                        // enable time stepping for this solution component (automatically resets each iteration)
         }
+    }
+
+    // Implementing the initial value function for the Cantera solver. Grid point j is always 0 (the only point in the single-point simulation), and thus unneeded
+    doublereal initialValue(size_t n, size_t j)
+    {
+        return ctNLS_initialValue(n);
     }
 };

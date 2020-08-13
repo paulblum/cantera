@@ -494,4 +494,40 @@ void Reactor::setAdvanceLimit(const string& nm, const double limit)
     }
 }
 
+// Specify the residual function for the system
+//  sol - iteration solution vector (input)
+//  rsd - residual vector (output)
+void Reactor::residFunction(double *sol, double *rsd)
+{
+    // ----------------------- UPDATE REACTOR STATE -----------------------
+    m_thermo->restoreState(m_state);
+    doublereal h = m_thermo->enthalpy_mass();
+    doublereal p = m_thermo->pressure();
+    m_thermo->setMassFractions_NoNorm(sol);
+    m_thermo->setState_HP(h,p); // keep total enthalpy constant, allow Cantera to control reactor temperature
+
+    // ----------------------- GET REQ'D PROPERTIES -----------------------
+    const vector_fp& mw = m_thermo->molecularWeights();
+    doublereal wdot[m_nsp];
+    m_kin->getNetProductionRates(wdot);
+
+
+    // ----------------------- SPECIES CONSERVATION -----------------------
+    for (size_t k = 0; k < m_nsp; k++)
+    {
+        rsd[k] = wdot[k] * mw[k] * m_vol; // species production rate within reactor
+        for (size_t i = 0; i < m_inlet.size(); i++) {
+            rsd[k] += m_inlet[i]->outletSpeciesMassFlowRate(k);
+            rsd[k] -= m_inlet[i]->massFlowRate(0) * sol[k];
+        }
+    }
+}
+
+// Specify guesses for the initial values.
+// Note: called during Sim1D initialization
+doublereal Reactor::initialValue(size_t i) {
+    m_thermo->restoreState(m_state);
+    return m_thermo->massFraction(i);
+}
+
 }
