@@ -390,7 +390,7 @@ doublereal ReactorNet::ctNLS_initialValue(size_t i)
 void ReactorNet::ctNLS_residFunction(double *sol, double *rsd)
 {
     for (size_t n = 0; n < m_reactors.size(); n++)
-        m_reactors[n]->residFunction(sol + m_start[n], rsd + m_start[n]);
+        m_reactors[n]->residFunction(sol + m_SSstart[n], rsd + m_SSstart[n]);
 }
 
 size_t ReactorNet::ctNLS_nEqs()

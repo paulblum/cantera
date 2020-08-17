@@ -500,11 +500,19 @@ void Reactor::setAdvanceLimit(const string& nm, const double limit)
 void Reactor::residFunction(double *sol, double *rsd)
 {
     // ----------------------- UPDATE REACTOR STATE -----------------------
+    doublereal Hdot = 0;
+    doublereal mdot = 0;
+    evalFlowDevices(0);
+    for (size_t i = 0; i < m_inlet.size(); i++) {
+        Hdot += m_mdot_in[i] * m_inlet[i]->enthalpy_mass();
+        mdot += m_mdot_in[i];
+    }
+    doublereal h = Hdot/mdot;
     m_thermo->restoreState(m_state);
-    doublereal h = m_thermo->enthalpy_mass();
     doublereal p = m_thermo->pressure();
     m_thermo->setMassFractions_NoNorm(sol);
     m_thermo->setState_HP(h,p); // keep total enthalpy constant, allow Cantera to control reactor temperature
+    m_thermo->saveState(m_state);
 
     // ----------------------- GET REQ'D PROPERTIES -----------------------
     const vector_fp& mw = m_thermo->molecularWeights();

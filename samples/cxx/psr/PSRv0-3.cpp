@@ -30,7 +30,7 @@ public:
 
     // Specify guesses for the initial values.
     // Note: called during Sim1D initialization
-    doublereal ctNLS_initialValue(size_t i, size_t j)
+    doublereal ctNLS_initialValue(size_t i)
     {
         return reactorThermo->massFraction(i); // mass fractions of the provided intial reactorSol (aka the initial guess)
     }

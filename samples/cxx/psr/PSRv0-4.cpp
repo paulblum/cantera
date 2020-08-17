@@ -30,7 +30,8 @@ int main()
 
         MassFlowController m1;
         m1.install(inlet, combustor);
-        m1.setMassFlowRate(1000);
+        m1.setMassFlowRate(100);
+        m1.updateMassFlowRate(0);
 
         Valve v;
         v.install(combustor, exhaust);
@@ -39,9 +40,8 @@ int main()
         ReactorNet sim;
         sim.addReactor(combustor);
 
-        sim.initialize();
         sim.solveSteady();
-        std::cout << combustor.temperature();
+        std::cout << combustor.contents().report();
         return 0;
     }
     catch (Cantera::CanteraError &err)
