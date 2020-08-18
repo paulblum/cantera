@@ -368,12 +368,12 @@ size_t ReactorNet::registerSensitivityParameter(
 double ReactorNet::solveSteady()
 {
     //initialize
-    m_SSneq = 0;
-    m_SSstart.assign(1, 0);
+    m_nv = 0;
+    m_start.assign(1, 0);
     for (size_t n = 0; n < m_reactors.size(); n++) {
         Reactor& r = *m_reactors[n];
-        m_SSneq += r.contents().nSpecies();
-        m_SSstart.push_back(m_SSneq);
+        m_nv += r.neq();
+        m_start.push_back(m_nv);
     }
     //solve
     Cantera_NonLinSol::solve();
@@ -382,20 +382,21 @@ double ReactorNet::solveSteady()
 doublereal ReactorNet::ctNLS_initialValue(size_t i)
 {
     for (size_t n = m_reactors.size() - 1; n >= 0; n--)
-        if (i >= m_SSstart[n])
-            return m_reactors[n]->initialValue(i - m_SSstart[n]);
+        if (i >= m_start[n])
+            return m_reactors[n]->initialValue(i - m_start[n]);
     return -1;
 }
 
 void ReactorNet::ctNLS_residFunction(double *sol, double *rsd)
 {
+    //updateState(sol);
     for (size_t n = 0; n < m_reactors.size(); n++)
-        m_reactors[n]->residFunction(sol + m_SSstart[n], rsd + m_SSstart[n]);
+        m_reactors[n]->residFunction(sol + m_start[n], rsd + m_start[n]);
 }
 
 size_t ReactorNet::ctNLS_nEqs()
 {
-    return m_SSneq;
+    return m_nv;
 }
 
 }

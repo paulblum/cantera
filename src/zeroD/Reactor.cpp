@@ -500,42 +500,62 @@ void Reactor::setAdvanceLimit(const string& nm, const double limit)
 void Reactor::residFunction(double *sol, double *rsd)
 {
     // ----------------------- UPDATE REACTOR STATE -----------------------
+    //updateState(sol); // Ideally this method would be used, but not working with my current solution model
+    
+    // Instead, update the state assuming constant pressure and enthalpy:
     doublereal Hdot = 0;
     doublereal mdot = 0;
     evalFlowDevices(0);
     for (size_t i = 0; i < m_inlet.size(); i++) {
-        Hdot += m_mdot_in[i] * m_inlet[i]->enthalpy_mass();
+        Hdot += m_mdot_in[i] * m_inlet[i]->enthalpy_mass(); // Enthalpy rate found by summing from all inlets
         mdot += m_mdot_in[i];
     }
     doublereal h = Hdot/mdot;
     m_thermo->restoreState(m_state);
-    doublereal p = m_thermo->pressure();
-    m_thermo->setMassFractions_NoNorm(sol);
-    m_thermo->setState_HP(h,p); // keep total enthalpy constant, allow Cantera to control reactor temperature
-    m_thermo->saveState(m_state);
+    doublereal p = m_thermo->pressure(); // constant pressure assumption
+    m_thermo->setMassFractions_NoNorm(sol+3);
+    m_thermo->setState_HP(h,p); // keep total enthalpy and pressure constant, allow Cantera to other variables
 
-    // ----------------------- GET REQ'D PROPERTIES -----------------------
-    const vector_fp& mw = m_thermo->molecularWeights();
-    doublereal wdot[m_nsp];
-    m_kin->getNetProductionRates(wdot);
+    syncState(); // saveState, set m_mass and m_intEnergy
+    evalEqs(0, sol, rsd, 0); // evaluate ODE system at y = sol. store result (ydot) in rsd
+
+    rsd[0] = m_mass - sol[0]; // m_mass determined above by setting state. (not constant)
+    rsd[1] = m_vol - sol[1]; // constant volume
+    rsd[2] = m_intEnergy*m_mass - sol[2]; // total internal energy
 
 
-    // ----------------------- SPECIES CONSERVATION -----------------------
-    for (size_t k = 0; k < m_nsp; k++)
-    {
-        rsd[k] = wdot[k] * mw[k] * m_vol; // species production rate within reactor
-        for (size_t i = 0; i < m_inlet.size(); i++) {
-            rsd[k] += m_inlet[i]->outletSpeciesMassFlowRate(k);
-            rsd[k] -= m_inlet[i]->massFlowRate(0) * sol[k];
-        }
-    }
+    // Species conservation, now done by evalEqs()...
+
+    // // ----------------------- GET REQ'D PROPERTIES -----------------------
+    // const vector_fp& mw = m_thermo->molecularWeights();
+    // doublereal wdot[m_nsp];
+    // m_kin->getNetProductionRates(wdot);
+
+    // // ----------------------- SPECIES CONSERVATION -----------------------
+    // for (size_t k = 0; k < m_nsp; k++)
+    // {
+    //     rsd[k+3] = wdot[k] * mw[k] * m_vol; // species production rate within reactor
+    //     for (size_t i = 0; i < m_inlet.size(); i++) {
+    //         rsd[k+3] += m_inlet[i]->outletSpeciesMassFlowRate(k);
+    //         rsd[k+3] -= m_inlet[i]->massFlowRate(0) * sol[k+3];
+    //     }
+    // }
 }
 
 // Specify guesses for the initial values.
 // Note: called during Sim1D initialization
 doublereal Reactor::initialValue(size_t i) {
     m_thermo->restoreState(m_state);
-    return m_thermo->massFraction(i);
+    switch (i)
+    {
+    case 0:
+        return m_thermo->density() * m_vol;
+    case 1:
+        return m_vol;
+    case 2:
+        return m_thermo->intEnergy_mass() * m_thermo->density() * m_vol;
+    }
+    return m_thermo->massFraction(i-3);
 }
 
 }

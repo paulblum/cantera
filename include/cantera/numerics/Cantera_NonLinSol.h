@@ -52,6 +52,9 @@ public:
             Domain1D::setTransientTolerances(rtol, atol, i);
             Domain1D::setComponentName(i, std::to_string(i));
         }
+        Domain1D::setBounds(0, 0, 100);
+        Domain1D::setBounds(1, 0, 5);
+        Domain1D::setBounds(2, -1000000, 1000000);
     }
 
     /**
