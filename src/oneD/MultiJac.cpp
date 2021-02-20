@@ -30,7 +30,8 @@ MultiJac::MultiJac(OneDim& r)
 void MultiJac::updateTransient(doublereal rdt, integer* mask)
 {
     for (size_t n = 0; n < m_size; n++) {
-        value(n,n) = m_ssdiag[n] - mask[n]*rdt;
+        value(n,n) = m_ssdiag[n] - mask[n]*rdt; // transient jacobian-- extract steady state
+        //std::cout << "\n TRANSJAC VALUE..." << value(n,n);
     }
 }
 

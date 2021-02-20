@@ -33,6 +33,7 @@ void MassFlowController::updateMassFlowRate(double time)
         mdot *= m_tfunc->eval(time);
     }
     m_mdot = std::max(mdot, 0.0);
+    // std::cout << "\n -ACTUAL mdot: " << m_mdot;
 }
 
 PressureController::PressureController() : FlowDevice(), m_master(0) {

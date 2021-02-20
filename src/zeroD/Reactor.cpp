@@ -162,14 +162,18 @@ void Reactor::updateState(doublereal* y)
         m_thermo->setState_TR(TT.second, m_mass / m_vol);
     } else {
         m_thermo->setDensity(m_mass/m_vol);
+        // std::cout << "DENSITY: " << m_thermo->density() << " -v------------\n";
     }
 
     updateSurfaceState(y + m_nsp + 3);
 
     // save parameters needed by other connected reactors
     m_enthalpy = m_thermo->enthalpy_mass();
+    // std::cout << "ENTHALPY: " << m_enthalpy << "\n";
     m_pressure = m_thermo->pressure();
+    // std::cout << "PRESSURE: " << m_pressure << "\n";
     m_intEnergy = m_thermo->intEnergy_mass();
+    // std::cout << "INT ENERGY: " << m_intEnergy << "\n";
     m_thermo->saveState(m_state);
 }
 
@@ -187,6 +191,8 @@ void Reactor::evalEqs(doublereal time, doublereal* y,
 {
     double dmdt = 0.0; // dm/dt (gas phase)
     double* dYdt = ydot + 3;
+
+    // std::cout << "\n\neval Eqs at time: " << time;
 
     evalFlowDevices(time);
     evalWalls(time);
@@ -261,10 +267,14 @@ void Reactor::evalWalls(double t)
 void Reactor::evalFlowDevices(double t)
 {
     for (size_t i = 0; i < m_outlet.size(); i++) {
+        // std::cout << "\nm_outlet " << m_outlet[i];
         m_mdot_out[i] = m_outlet[i]->massFlowRate(t);
+        // std::cout << "\n -at t = " << t << " m_mdot_out = " << m_mdot_out[i];
     }
     for (size_t i = 0; i < m_inlet.size(); i++) {
+        // std::cout << "\nm_inlet " << m_outlet[i];
         m_mdot_in[i] = m_inlet[i]->massFlowRate(t);
+        // std::cout << "\n -at t = " << t << " m_mdot_in = " << m_mdot_in[i];
     }
 }
 
@@ -500,28 +510,38 @@ void Reactor::setAdvanceLimit(const string& nm, const double limit)
 void Reactor::residFunction(double *sol, double *rsd)
 {
     // ----------------------- UPDATE REACTOR STATE -----------------------
-    //updateState(sol); // Ideally this method would be used, but not working with my current solution model
+    // std::cout << "\n\n----- sol components -----\n";
+    // for (int i = 0; i < m_nv; i++)
+    //     std::cout << sol[i] << " ";
+    updateState(sol); // Ideally this method would be used, but not working with my current solution model
+    // std::cout << "\nReactor state after updateState():" << m_thermo->report();
     
-    // Instead, update the state assuming constant pressure and enthalpy:
-    doublereal Hdot = 0;
-    doublereal mdot = 0;
-    evalFlowDevices(0);
-    for (size_t i = 0; i < m_inlet.size(); i++) {
-        Hdot += m_mdot_in[i] * m_inlet[i]->enthalpy_mass(); // Enthalpy rate found by summing from all inlets
-        mdot += m_mdot_in[i];
-    }
-    doublereal h = Hdot/mdot;
-    m_thermo->restoreState(m_state);
-    doublereal p = m_thermo->pressure(); // constant pressure assumption
-    m_thermo->setMassFractions_NoNorm(sol+3);
-    m_thermo->setState_HP(h,p); // keep total enthalpy and pressure constant, allow Cantera to other variables
+    // // Instead, update the state assuming constant pressure and enthalpy:
+    // doublereal Hdot = 0;
+    // doublereal mdot = 0;
+    // evalFlowDevices(0);
+    // for (size_t i = 0; i < m_inlet.size(); i++) {
+    //     Hdot += m_mdot_in[i] * m_inlet[i]->enthalpy_mass(); // Enthalpy rate found by summing from all inlets
+    //     mdot += m_mdot_in[i];
+    // }
+    // doublereal h = Hdot/mdot;
+    // m_thermo->restoreState(m_state);
+    // doublereal p = m_thermo->pressure(); // constant pressure assumption
+    // m_thermo->setMassFractions_NoNorm(sol+3);
+    // m_thermo->setState_HP(h,p); // keep total enthalpy and pressure constant, allow Cantera to other variables
 
-    syncState(); // saveState, set m_mass and m_intEnergy
+    // syncState(); // saveState, set m_mass and m_intEnergy
     evalEqs(0, sol, rsd, 0); // evaluate ODE system at y = sol. store result (ydot) in rsd
+    // std::cout << "\n PRESSURE = " << m_thermo->pressure();
+    
 
-    rsd[0] = m_mass - sol[0]; // m_mass determined above by setting state. (not constant)
-    rsd[1] = m_vol - sol[1]; // constant volume
-    rsd[2] = m_intEnergy*m_mass - sol[2]; // total internal energy
+    // rsd[0] = Cantera::OneAtm - m_pressure; // m_mass determined above by setting state. (not constant)
+    rsd[1] = 1.0 - sol[1]; // constant volume
+    // rsd[2] = m_intEnergy*m_mass - sol[2]; // total internal energy
+
+    // std::cout << "\nrsd components \n";
+    // for (int i = 0; i < m_nv; i++)
+    //     std::cout << rsd[i] << " ";
 
 
     // Species conservation, now done by evalEqs()...
@@ -545,14 +565,17 @@ void Reactor::residFunction(double *sol, double *rsd)
 // Specify guesses for the initial values.
 // Note: called during Sim1D initialization
 doublereal Reactor::initialValue(size_t i) {
-    m_thermo->restoreState(m_state);
+    m_thermo->restoreState(m_state); 
     switch (i)
     {
     case 0:
+        //std::cout << "Initial value 0: " << m_thermo->density() * m_vol << "\n";
         return m_thermo->density() * m_vol;
     case 1:
+        //std::cout << "Initial value 1: " << m_vol << "\n";
         return m_vol;
     case 2:
+        //std::cout << "Initial value 2: " << m_thermo->intEnergy_mass() * m_thermo->density() * m_vol << "\n";
         return m_thermo->intEnergy_mass() * m_thermo->density() * m_vol;
     }
     return m_thermo->massFraction(i-3);

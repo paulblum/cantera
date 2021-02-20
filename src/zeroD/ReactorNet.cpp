@@ -376,7 +376,7 @@ double ReactorNet::solveSteady()
         m_start.push_back(m_nv);
     }
     //solve
-    Cantera_NonLinSol::solve();
+    Cantera_NonLinSol::solve(8);
 }
 
 doublereal ReactorNet::ctNLS_initialValue(size_t i)

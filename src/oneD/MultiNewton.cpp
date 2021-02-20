@@ -162,13 +162,21 @@ doublereal MultiNewton::norm2(const doublereal* x,
 void MultiNewton::step(doublereal* x, doublereal* step,
                        OneDim& r, MultiJac& jac, int loglevel)
 {
-    r.eval(npos, x, step);
+    r.eval(npos, x, step); //eval resid Functions... 
     for (size_t n = 0; n < r.size(); n++) {
         step[n] = -step[n];
+    }
+    writelog("\n\nMULTINEWTON STEP");
+    for(int i = 0; i < r.size(); i++) {
+        writelog("\ni: {:2d} x: {:15.5f} step: {:15.5f}", i, x[i], step[i]);
     }
 
     try {
         jac.solve(step, step);
+        writelog("\nAFTER JACOBIAN SOLVE");
+        for(int i = 0; i < r.size(); i++) {
+            writelog("\ni: {:2d} x: {:15.5f} step: {:15.5f}", i, x[i], step[i]);
+        }
     } catch (CanteraError&) {
         int iok = jac.info() - 1;
         if (iok >= 0) {
@@ -225,6 +233,7 @@ int MultiNewton::dampStep(const doublereal* x0, const doublereal* step0,
 
     // compute the multiplier to keep all components in bounds
     doublereal fbound = boundStep(x0, step0, r, loglevel-1);
+    writelog("\nFBOUND: {}", fbound);
 
     // if fbound is very small, then x0 is already close to the boundary and
     // step0 points out of the allowed domain. In this case, the Newton
@@ -250,8 +259,15 @@ int MultiNewton::dampStep(const doublereal* x0, const doublereal* step0,
         // compute the next undamped step that would result if x1 is accepted
         step(x1, step1, r, jac, loglevel-1);
 
+        writelog("\n\n NEXT UNDAMPED STEP COMPONENTS, damp = {}", damp);
+        for(int i = 0; i < m_n; i++) {
+            writelog("\ni: {:2d} x0: {:15.5f} step0: {:15.5f} x1: {:15.5f} step1: {:15.5f}", i, x0[i], step0[i], x1[i], step1[i]);
+        }
+
         // compute the weighted norm of step1
-        s1 = norm2(x1, step1, r);
+        s1 = norm2(x1, step1, r); // s1 is an address????
+        writelog("\n\n S0 ----------> {}", s0);
+        writelog("\n S1 ----------> {} = {} \n\n", s1, norm2(x1, step1, r));
 
         // write log information
         if (loglevel > 0) {
@@ -319,6 +335,12 @@ int MultiNewton::solve(doublereal* x0, doublereal* x1,
 
         // compute the undamped Newton step
         step(&m_x[0], &m_stp[0], r, jac, loglevel-1);
+
+        writelog("\n\n UNDAMPED STEP COMPONENTS");
+        for(int i = 0; i < m_n; i++) {
+            writelog("\ni: {:2d} x0: {:15.5f} step: {:15.5f} x1: {:15.5f}", i, m_x[i], m_stp[i], m_x[i] + m_stp[i]);
+        }
+
 
         // increment the Jacobian age
         jac.incrementAge();

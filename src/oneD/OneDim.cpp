@@ -224,9 +224,12 @@ void OneDim::resize()
 int OneDim::solve(doublereal* x, doublereal* xnew, int loglevel)
 {
     if (!m_jac_ok) {
-        eval(npos, x, xnew, 0.0, 0);
-        m_jac->eval(x, xnew, 0.0);
-        m_jac->updateTransient(m_rdt, m_mask.data());
+        eval(npos, x, xnew, 0.0, 0); //calculate residual
+        // for (int i = 0; i < m_nv; i++)
+        //     std::cout << x[i] << ", ";
+        // std::cout << std::endl;
+        m_jac->eval(x, xnew, 0.0); //perterbed resid for each component... compareing to previous?
+        m_jac->updateTransient(m_rdt, m_mask.data()); //time integration for each componenet
         m_jac_ok = true;
     }
 
@@ -299,12 +302,14 @@ doublereal OneDim::ssnorm(doublereal* x, doublereal* r)
 
 void OneDim::initTimeInteg(doublereal dt, doublereal* x)
 {
+    std::cout << "\nINIT TIME INT";
     doublereal rdt_old = m_rdt;
     m_rdt = 1.0/dt;
 
     // if the stepsize has changed, then update the transient part of the
     // Jacobian
     if (fabs(rdt_old - m_rdt) > Tiny) {
+        std::cout << "\n--UPDATE TRANSIENT";
         m_jac->updateTransient(m_rdt, m_mask.data());
     }
 
@@ -345,7 +350,7 @@ void OneDim::init()
     m_init = true;
 }
 
-doublereal OneDim::timeStep(int nsteps, doublereal dt, doublereal* x,
+doublereal OneDim::timeStep(int nsteps, doublereal dt, doublereal* x, //TAKE TIMESTEP
                             doublereal* r, int loglevel)
 {
     // set the Jacobian age parameter to the transient value
@@ -400,6 +405,7 @@ doublereal OneDim::timeStep(int nsteps, doublereal dt, doublereal* x,
                 successiveFailures = 0;
             } else {
                 dt *= m_tfactor;
+                writelog("\n\nNEW TIMESTEP dt = {}", dt);
                 if (dt < m_tmin) {
                     throw CanteraError("OneDim::timeStep",
                                        "Time integration failed.");

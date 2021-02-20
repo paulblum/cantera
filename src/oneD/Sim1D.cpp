@@ -31,7 +31,7 @@ Sim1D::Sim1D(vector<Domain1D*>& domains) :
     }
 
     // set some defaults
-    m_tstep = 1.0e-5;
+    m_tstep = 1.0e-3;
     m_steps = { 10 };
 }
 
@@ -287,8 +287,9 @@ void Sim1D::solve(int loglevel, bool refine_grid)
                 if (loglevel > 0) {
                     writelog("Take {} timesteps   ", nsteps);
                 }
-                dt = timeStep(nsteps, dt, m_x.data(), m_xnew.data(),
+                dt = timeStep(nsteps, dt, m_x.data(), m_xnew.data(), //TIMESTEP
                               loglevel-1);
+                writelog("\n\n\n -------------------------------------MADE IT OUT OF TIMESTEP \n\n\n");
                 m_xlast_ts = m_x;
                 if (loglevel > 6) {
                     save("debug_sim1d.xml", "debug", "After timestepping");

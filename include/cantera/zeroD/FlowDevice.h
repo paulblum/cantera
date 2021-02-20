@@ -58,6 +58,7 @@ public:
         if (time != -999.0) {
             updateMassFlowRate(time);
         }
+        // std::cout << "\n -at t = " << time << " ID " << this << " returns " << m_mdot;
         return m_mdot;
     }
 
